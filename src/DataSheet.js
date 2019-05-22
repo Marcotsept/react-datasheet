@@ -460,7 +460,6 @@ export default class DataSheet extends PureComponent {
     const {sheetRenderer: SheetRenderer, rowRenderer: RowRenderer, cellRenderer,
       dataRenderer, valueRenderer, dataEditor, valueViewer, attributesRenderer,
       className, overflow, data, keyFn} = this.props
-    const {forceEdit} = this.state
 
     return (
       <span ref={r => { this.dgDom = r }} tabIndex='0' className='data-grid-container' onKeyDown={this.handleKey}>
@@ -475,7 +474,6 @@ export default class DataSheet extends PureComponent {
                       row={i}
                       col={j}
                       cell={cell}
-                      forceEdit={forceEdit}
                       onMouseDown={this.onMouseDown}
                       onMouseOver={this.onMouseOver}
                       onDoubleClick={this.onDoubleClick}
