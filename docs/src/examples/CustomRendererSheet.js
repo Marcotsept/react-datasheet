@@ -1,24 +1,13 @@
 import React, { PureComponent } from 'react'
-import { DragDropContextProvider } from 'react-dnd'
-import HTML5Backend from 'react-dnd-html5-backend'
 import Select from 'react-select'
 
 import DataSheet from '../lib'
 import {ENTER_KEY, TAB_KEY} from '../lib/keys'
 
-import {
-  colDragSource, colDropTarget,
-  rowDragSource, rowDropTarget
-} from './drag-drop.js'
-
-const Header = colDropTarget(colDragSource((props) => {
-  const { col, connectDragSource, connectDropTarget, isOver } = props
-  const className = isOver ? 'cell read-only drop-target' : 'cell read-only'
-  return connectDropTarget(
-    connectDragSource(
-      <th className={className} style={{ width: col.width }}>{col.label}</th>
-    ))
-}))
+const Header = (props) => {
+  const { className, col } = props
+  return <th className={className} style={{ width: col.width }}>{col.label}</th>
+}
 
 class SheetRenderer extends PureComponent {
   render () {
@@ -26,33 +15,59 @@ class SheetRenderer extends PureComponent {
     return (
       <table className={className}>
         <thead>
-          <tr>
-            <th className='cell read-only row-handle' key='$$actionCell' />
-            {
-              columns.map((col, index) => (
-                <Header key={col.label} col={col} columnIndex={index} onColumnDrop={onColumnDrop} />
-              ))
-            }
-          </tr>
+        <tr>
+          {
+            columns.map((col, index) => (
+              <Header key={col.label} col={col} columnIndex={index} onColumnDrop={onColumnDrop} />
+            ))
+          }
+        </tr>
         </thead>
         <tbody>
-          {this.props.children}
+        {this.props.children}
         </tbody>
       </table>
     )
   }
 }
-
-const RowRenderer = rowDropTarget(rowDragSource((props) => {
-  const { isOver, children, connectDropTarget, connectDragPreview, connectDragSource } = props
-  const className = isOver ? 'drop-target' : ''
-  return connectDropTarget(connectDragPreview(
+// {/*<td className='cell read-only row-handle' key='$$actionCell' />*/}
+const RowRenderer = (props) => {
+  const { className, children } = props
+  return (
     <tr className={className}>
-      { connectDragSource(<td className='cell read-only row-handle' key='$$actionCell' />)}
       { children }
     </tr>
-  ))
-}))
+  )
+}
+
+class Cell extends React.PureComponent {
+  render () {
+    console.log('render')
+    const {
+      cell, row, col, attributesRenderer,
+      className, style, onMouseDown, onMouseOver, onDoubleClick, onContextMenu
+    } = this.props
+
+    const {colSpan, rowSpan} = cell
+    const attributes = attributesRenderer ? attributesRenderer(cell, row, col) : {}
+
+    return (
+      <td
+        className={className}
+        onMouseDown={onMouseDown}
+        onMouseOver={onMouseOver}
+        onDoubleClick={onDoubleClick}
+        onContextMenu={onContextMenu}
+        colSpan={colSpan}
+        rowSpan={rowSpan}
+        style={style}
+        {...attributes}
+      >
+        {this.props.children}
+      </td>
+    )
+  }
+}
 
 class SelectEditor extends PureComponent {
   constructor (props) {
@@ -160,19 +175,6 @@ class CustomRendererSheet extends PureComponent {
       ],
       grid: [
         [{ value: 'Ordinary Bitter'}, { value: '20 - 35'}, { value: '5 - 12'}, { value: 4, dataEditor: RangeEditor }],
-        [{ value: 'Special Bitter'}, { value: '28 - 40'}, { value: '6 - 14'}, { value: 4, dataEditor: RangeEditor }],
-        [{ value: 'ESB'}, { value: '30 - 45'}, { value: '6 - 14'}, { value: 5, dataEditor: RangeEditor, valueViewer: FillViewer }],
-        [{ value: 'Scottish Light'}, { value: '9 - 20'}, { value: '6 - 15'}, { value: 3, dataEditor: SelectEditor, valueViewer: FillViewer }],
-        [{ value: 'Scottish Heavy'}, { value: '12 - 20'}, { value: '8 - 30'}, { value: 4, dataEditor: SelectEditor }],
-        [{ value: 'Scottish Export'}, { value: '15 - 25'}, { value: '9 - 19'}, { value: 4, dataEditor: SelectEditor }],
-        [{ value: 'English Summer Ale'}, { value: '20 - 30'}, { value: '3 - 7'}, { value: 3, dataEditor: SelectEditor }],
-        [{ value: 'English Pale Ale'}, { value: '20 - 40'}, { value: '5 - 12'}, { value: 4, dataEditor: SelectEditor }],
-        [{ value: 'English IPA'}, { value: '35 - 63'}, { value: '6 - 14'}, { value: 4, dataEditor: SelectEditor }],
-        [{ value: 'Strong Ale'}, { value: '30 - 65'}, { value: '8 - 21'}, { value: 4, dataEditor: SelectEditor }],
-        [{ value: 'Old Ale'}, { value: '30 -65'}, { value: '12 - 30'}, { value: 4, dataEditor: SelectEditor }],
-        [{ value: 'Pale Mild Ale'}, { value: '10 - 20'}, { value: '6 - 9'}, { value: 3, dataEditor: SelectEditor }],
-        [{ value: 'Dark Mild Ale'}, { value: '10 - 24'}, { value: '17 - 34'}, { value: 3, dataEditor: SelectEditor }],
-        [{ value: 'Brown Ale'}, { value: '12 - 25'}, { value: '12 - 17'}, { value: 3, dataEditor: SelectEditor }]
       ].map((a, i) => a.map((cell, j) => Object.assign(cell, {key: `${i}-${j}`})))
     }
 
@@ -181,6 +183,7 @@ class CustomRendererSheet extends PureComponent {
     this.handleChanges = this.handleChanges.bind(this)
     this.renderSheet = this.renderSheet.bind(this)
     this.renderRow = this.renderRow.bind(this)
+    this.renderCell = this.renderCell.bind(this)
   }
 
   handleColumnDrop (from, to) {
@@ -219,17 +222,20 @@ class CustomRendererSheet extends PureComponent {
     return <RowRenderer rowIndex={row} onRowDrop={this.handleRowDrop} {...rest} />
   }
 
+  renderCell (props) {
+    return <Cell columns={this.state.columns} {...props} />
+  }
+
   render () {
     return (
-      <DragDropContextProvider backend={HTML5Backend}>
-        <DataSheet
-          data={this.state.grid}
-          valueRenderer={(cell) => cell.value}
-          sheetRenderer={this.renderSheet}
-          rowRenderer={this.renderRow}
-          onCellsChanged={this.handleChanges}
-        />
-      </DragDropContextProvider>
+      <DataSheet
+        data={this.state.grid}
+        valueRenderer={(cell) => cell.value}
+        sheetRenderer={this.renderSheet}
+        rowRenderer={this.renderRow}
+        onCellsChanged={this.handleChanges}
+        cellRenderer={this.renderCell}
+      />
     )
   }
 }

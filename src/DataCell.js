@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
 
 import {ENTER_KEY, ESCAPE_KEY, TAB_KEY, RIGHT_KEY, LEFT_KEY, UP_KEY, DOWN_KEY} from './keys'
@@ -22,7 +22,7 @@ function widthStyle (cell) {
   return width ? { width } : null
 }
 
-export default class DataCell extends PureComponent {
+export default class DataCell extends React.Component {
   constructor (props) {
     super(props)
     this.handleChange = this.handleChange.bind(this)
@@ -35,7 +35,15 @@ export default class DataCell extends PureComponent {
     this.handleContextMenu = this.handleContextMenu.bind(this)
     this.handleDoubleClick = this.handleDoubleClick.bind(this)
 
-    this.state = {updated: false, reverting: false, value: '', committing: false}
+    this.state = {updated: false, reverting: false, value: props.cell.value, committing: false}
+  }
+
+  shouldComponentUpdate (nextProps, nextState, nextContext) {
+    if (nextProps.selected !== this.props.selected) return true
+    else if (nextProps.editing !== this.props.editing) return true
+    else if (nextState.value !== this.state.value) return true
+    else if (nextState.updated !== this.state.updated) return true
+    return false
   }
 
   componentWillReceiveProps (nextProps) {
@@ -51,10 +59,10 @@ export default class DataCell extends PureComponent {
 
   componentDidUpdate (prevProps) {
     if (prevProps.editing === true &&
-        this.props.editing === false &&
-        !this.state.reverting &&
-        !this.state.committing &&
-        this.state.value !== initialData(this.props)) {
+      this.props.editing === false &&
+      !this.state.reverting &&
+      !this.state.committing &&
+      this.state.value !== initialData(this.props)) {
       this.props.onChange(this.props.row, this.props.col, this.state.value)
     }
   }
@@ -167,8 +175,8 @@ export default class DataCell extends PureComponent {
     const {updated} = this.state
 
     const content = this.renderComponent(editing, cell) ||
-        this.renderEditor(editing, cell, row, col, dataEditor) ||
-        this.renderViewer(cell, row, col, valueRenderer, valueViewer)
+      this.renderEditor(editing, cell, row, col, dataEditor) ||
+      this.renderViewer(cell, row, col, valueRenderer, valueViewer)
 
     const className = [
       cell.className,
@@ -195,7 +203,7 @@ export default class DataCell extends PureComponent {
         onDoubleClick={this.handleDoubleClick}
         onContextMenu={this.handleContextMenu}
         onKeyUp={onKeyUp}
-        >
+      >
         {content}
       </CellRenderer>
     )
